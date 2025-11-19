@@ -1,0 +1,5 @@
+{
+  "name": "ISO 42001 Assistant",
+  "description": "A RAG-powered chat assistant for ISO 42001 documentation, powered by Gemini 2.5 Flash.",
+  "requestFramePermissions": []
+}
