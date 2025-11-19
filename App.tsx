@@ -44,19 +44,16 @@ const App: React.FC = () => {
 
     if (newFiles.length > 0) {
       setFiles(prev => [...prev, ...newFiles]);
-      // Reset chat when context changes to ensure the model "sees" the new files in a fresh session or re-injected context
-      // For simplicity in this demo, we reset the session logic but keep UI messages if preferred, 
-      // but technically RAG works best if the session knows the context from the start.
-      // We will trigger a session reset in the service.
-      resetChatSession();
+      // NOTE: We do NOT reset the chat session here. 
+      // The service handles injecting new files into the existing session on the next message.
       
-      // Optional: Add a system message to UI indicating context updated
+      // Add a visual indicator in the chat that files were added
       setMessages(prev => [
         ...prev, 
         { 
           id: Date.now().toString(), 
-          role: 'model', 
-          text: `**System Update:** I've added ${newFiles.length} new document(s) to my context. I'm ready to answer questions about them.`, 
+          role: 'system', 
+          text: `_Uploaded ${newFiles.length} new file(s). They will be analyzed with your next question._`, 
           timestamp: Date.now() 
         }
       ]);
@@ -65,7 +62,18 @@ const App: React.FC = () => {
 
   const handleRemoveFile = (id: string) => {
     setFiles(prev => prev.filter(f => f.id !== id));
+    // We MUST reset the session when removing files because the model's context window 
+    // still contains the old file data. There is no "un-read" API.
     resetChatSession();
+    setMessages(prev => [
+        ...prev, 
+        { 
+          id: Date.now().toString(), 
+          role: 'system', 
+          text: `_File removed. Chat context has been reset._`, 
+          timestamp: Date.now() 
+        }
+      ]);
   };
 
   const handleSendMessage = async () => {
@@ -112,7 +120,7 @@ const App: React.FC = () => {
       setError(err.message || "An error occurred while communicating with Gemini.");
       setMessages(prev => prev.map(msg => 
         msg.id === modelMsgId 
-          ? { ...msg, text: "I encountered an error processing your request. Please check your connection or API key.", isThinking: false } 
+          ? { ...msg, text: "I encountered an error processing your request. Please ensure your API key is valid and you are uploading supported file types (PDF recommended).", isThinking: false } 
           : msg
       ));
     } finally {
